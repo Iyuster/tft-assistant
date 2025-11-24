@@ -19,8 +19,22 @@ from data_processing.formatters import (
     format_match_summary
 )
 from config import APP_TITLE, MAX_MATCHES, DEFAULT_REGION, DEFAULT_ROUTING, REGIONS
-from database.db_manager import db_manager
-from meta_analysis.meta_report import get_top_comps, get_meta_summary, format_comp_for_display
+
+# Try to import database components (may fail in some deployments)
+try:
+    from database.db_manager import db_manager
+    from meta_analysis.meta_report import get_top_comps, get_meta_summary, format_comp_for_display
+    DB_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Database not available: {e}")
+    DB_AVAILABLE = False
+    # Create dummy functions
+    def get_top_comps(*args, **kwargs):
+        return []
+    def get_meta_summary():
+        return {'total_matches': 0, 'total_players': 0, 'viable_comps': 0, 'newest_match': None}
+    def format_comp_for_display(comp):
+        return {}
 
 # Load environment variables
 load_dotenv()
@@ -333,6 +347,12 @@ def render_meta_report():
     st.divider()
     st.header("📊 Reporte Completo del Meta")
     
+    # Check if database is available
+    if not DB_AVAILABLE:
+        st.warning("⚠️ La base de datos no está disponible. Esta funcionalidad requiere datos del meta.")
+        st.info("💡 Para usar esta funcionalidad, necesitas ejecutar primero el script de recolección de datos.")
+        return
+    
     # Filters
     col_filter1, col_filter2, col_filter3 = st.columns(3)
     with col_filter1:
@@ -396,12 +416,16 @@ def render_dashboard():
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Get meta summary
-    try:
-        meta_summary = get_meta_summary()
-        has_meta_data = meta_summary['total_matches'] > 0
-    except:
-        has_meta_data = False
-        meta_summary = {'total_matches': 0, 'total_players': 0, 'viable_comps': 0, 'newest_match': None}
+    has_meta_data = False
+    meta_summary = {'total_matches': 0, 'total_players': 0, 'viable_comps': 0, 'newest_match': None}
+    
+    if DB_AVAILABLE:
+        try:
+            meta_summary = get_meta_summary()
+            has_meta_data = meta_summary['total_matches'] > 0
+        except Exception as e:
+            print(f"Error getting meta summary: {e}")
+            has_meta_data = False
     
     # Stats cards
     if has_meta_data:
@@ -457,7 +481,7 @@ def render_dashboard():
         st.rerun()
     
     # Top 3 compositions
-    if has_meta_data:
+    if has_meta_data and DB_AVAILABLE:
         st.markdown("### 🔥 Top 3 Composiciones del Meta")
         
         try:
