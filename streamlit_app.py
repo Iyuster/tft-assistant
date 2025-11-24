@@ -19,6 +19,7 @@ except Exception as e:
 # Import and run the main application
 from ui.extended_monitor import main
 
-if __name__ == "__main__":
-    main()
+# Call main() directly - Streamlit Cloud doesn't use __name__ == "__main__"
+main()
+
 
