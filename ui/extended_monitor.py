@@ -427,6 +427,21 @@ def render_dashboard():
             print(f"Error getting meta summary: {e}")
             has_meta_data = False
     
+    # Show info message if no meta data
+    if not DB_AVAILABLE:
+        st.info("ℹ️ **Base de datos no disponible**: Las estadísticas del meta no están disponibles en este momento.")
+    elif not has_meta_data:
+        st.warning("""
+        ⚠️ **Base de datos vacía**: No hay datos del meta todavía.
+        
+        Para ver estadísticas del meta, necesitas ejecutar el script de recolección de datos:
+        ```bash
+        python scripts/collect_data.py
+        ```
+        
+        **Nota**: La búsqueda de summoners funciona independientemente de los datos del meta.
+        """)
+    
     # Stats cards
     if has_meta_data:
         st.markdown("### 📊 Estadísticas del Meta Actual")
@@ -521,30 +536,56 @@ def render_dashboard():
 # ============================================================
 # MAIN ROUTING
 # ============================================================
-query_params = st.query_params
-viewing_summoner = 'summoner' in query_params
-viewing_meta = query_params.get('view') == 'meta_report'
-
-# Apply theme CSS globally based on session state
-if st.session_state.dark_theme:
-    render_dark_theme_css()
-else:
-    render_light_theme_css()
-
-if viewing_summoner:
-    # Summoner profile view
-    summoner_name = query_params.get('summoner', '')
-    summoner_tag = query_params.get('tag', '')
-    summoner_region = query_params.get('region', 'euw1')
-    routing = query_params.get('routing', 'europe')
-    num_matches_param = int(query_params.get('matches', 10))
+def main():
+    """Main entry point for the Streamlit application"""
+    # Validate API key
+    if not api_key:
+        st.error("❌ **Error de Configuración**: No se encontró la API key de Riot Games")
+        st.info("""
+        Para usar esta aplicación, necesitas configurar tu API key de Riot Games:
+        
+        1. Obtén tu API key en: https://developer.riotgames.com/
+        2. En Streamlit Cloud: Ve a Settings → Secrets y agrega:
+           ```
+           RIOT_API_KEY = "tu-api-key-aqui"
+           ```
+        3. En local: Crea un archivo `.env` con:
+           ```
+           RIOT_API_KEY=tu-api-key-aqui
+           ```
+        """)
+        st.stop()
     
-    render_summoner_profile(summoner_name, summoner_tag, summoner_region, routing, num_matches_param)
+    query_params = st.query_params
+    viewing_summoner = 'summoner' in query_params
+    viewing_meta = query_params.get('view') == 'meta_report'
+    
+    # Apply theme CSS globally based on session state
+    if st.session_state.dark_theme:
+        render_dark_theme_css()
+    else:
+        render_light_theme_css()
+    
+    if viewing_summoner:
+        # Summoner profile view
+        summoner_name = query_params.get('summoner', '')
+        summoner_tag = query_params.get('tag', '')
+        summoner_region = query_params.get('region', 'euw1')
+        routing = query_params.get('routing', 'europe')
+        num_matches_param = int(query_params.get('matches', 10))
+        
+        render_summoner_profile(summoner_name, summoner_tag, summoner_region, routing, num_matches_param)
+    
+    elif viewing_meta:
+        # Meta report view
+        render_meta_report()
+    
+    else:
+        # Dashboard view
+        render_dashboard()
 
-elif viewing_meta:
-    # Meta report view
-    render_meta_report()
 
-else:
-    # Dashboard view
-    render_dashboard()
+# Run the application
+if __name__ == "__main__" or __name__ == "__mp_main__":
+    main()
+
