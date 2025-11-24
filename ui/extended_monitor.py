@@ -36,7 +36,7 @@ st.set_page_config(
 
 # Initialize session state
 if 'dark_theme' not in st.session_state:
-    st.session_state.dark_theme = False
+    st.session_state.dark_theme = True
 
 
 # ============================================================
